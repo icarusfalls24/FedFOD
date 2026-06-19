@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fedfod-client-a-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fedfod-client-a
+  template:
+    metadata:
+      labels:
+        app: fedfod-client-a
+    spec:
+      containers:
+        - name: client-a
+          image: fedfod:latest
+          imagePullPolicy: Never
+          command: ["python", "client_runner.py"]
+          args: [
+            "--client-id", "0",
+            "--server-address", "fedfod-coordinator-service:8082",
+            "--airport-config", "config/airport_configs/airport_A.yaml",
+            "--backbone", "yolov8n"
+          ]
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+            requests:
+              nvidia.com/gpu: "1"
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fedfod-client-b-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fedfod-client-b
+  template:
+    metadata:
+      labels:
+        app: fedfod-client-b
+    spec:
+      containers:
+        - name: client-b
+          image: fedfod:latest
+          imagePullPolicy: Never
+          command: ["python", "client_runner.py"]
+          args: [
+            "--client-id", "1",
+            "--server-address", "fedfod-coordinator-service:8082",
+            "--airport-config", "config/airport_configs/airport_B.yaml",
+            "--backbone", "yolov8n"
+          ]
+          resources:
+            limits:
+              nvidia.com/gpu: "1"
+            requests:
+              nvidia.com/gpu: "1"
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"

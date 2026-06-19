@@ -1,0 +1,12 @@
+*.zip
+data/
+logs/
+checkpoints/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+.env
+.env.*
+.pytest_cache
+*.log

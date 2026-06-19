@@ -1,0 +1,72 @@
+# Airport A — Hub Airport Configuration
+# Large international hub with high-bandwidth fibre connectivity and 4K cameras.
+
+airport:
+  name: "Airport_A"
+  type: "hub"
+  icao_code: "XXXX"
+  description: "Large international hub airport with extensive runway infrastructure"
+
+network:
+  connectivity: "fibre"
+  bandwidth_mbps: 1000
+  latency_ms: 5
+  reliable: true
+  sync_mode: "synchronous"
+
+cameras:
+  count: 12
+  resolution: [3840, 2160]  # 4K UHD
+  resolution_label: "4K"
+  fps: 30
+  type: "optical"
+  coverage_zones:
+    - "runway_28L"
+    - "runway_28R"
+    - "taxiway_A"
+    - "taxiway_B"
+    - "apron_north"
+    - "apron_south"
+
+compute:
+  gpu: "NVIDIA A100"
+  gpu_memory_gb: 40
+  cpu_cores: 32
+  ram_gb: 128
+  edge_inference: true
+
+data:
+  quality_score_q: 0.91
+  annotation_completeness: 0.95
+  images_per_day: 50000
+  dominant_classes:
+    - "metal_fastener"
+    - "tyre_fragment"
+    - "maintenance_tool"
+    - "luggage_fragment"
+    - "aircraft_panel_fragment"
+  rare_classes:
+    - "volcanic_ash_deposit"
+    - "wildlife_mammal"
+  class_distribution: "moderate_imbalance"
+  data_dir: "data/airport_A"
+  train_annotations: "data/airport_A/annotations/train.json"
+  val_annotations: "data/airport_A/annotations/val.json"
+
+training:
+  local_epochs: 3
+  local_batch_size: 16
+  learning_rate: 0.001
+  augmentation_level: "standard"
+  max_samples_per_round: null  # Use all available
+
+communication:
+  max_payload_mb: 2.0
+  compression: "sparsification_topk"
+  quantization_bits: 8
+
+environment:
+  weather_conditions: ["clear", "rain", "fog", "night"]
+  surface_types: ["asphalt", "concrete"]
+  lighting: "mixed"
+  temperature_range_c: [-10, 45]

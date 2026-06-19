@@ -1,0 +1,85 @@
+project: FedFOD
+version: "1.0.0"
+
+fl:
+  num_rounds: 90
+  num_clients: 3
+  min_clients_per_round: 2
+  local_epochs: 3
+  local_steps_K: 10
+  learning_rate: 0.001
+  proximal_mu: 0.05
+  scaffold_correction: true
+
+scaffold:
+  control_variate_init: "zero"
+  correction_weight: 1.0
+
+model:
+  backbone: "rtdetr-l"
+  input_size: [640, 640]
+  num_classes: 15
+  embed_dim: 512
+  conf_threshold: 0.35
+  nms_iou_threshold: 0.45
+  dwell_time_seconds: 30
+
+class_map:
+  0: "metal_fastener"
+  1: "tyre_fragment"
+  2: "rubber_strip"
+  3: "composite_debris"
+  4: "wildlife_bird"
+  5: "wildlife_mammal"
+  6: "maintenance_tool"
+  7: "luggage_fragment"
+  8: "aircraft_panel_fragment"
+  9: "pavement_fragment"
+  10: "ground_equipment_part"
+  11: "volcanic_ash_deposit"
+  12: "ice_chunk"
+  13: "cargo_debris"
+  14: "unknown_critical"
+
+open_world:
+  clip_model: "ViT-B/32"
+  cosine_sim_threshold: 0.70
+  novelty_embed_size_kb: 10
+  prototype_update_interval_rounds: 5
+
+communication:
+  grpc_port: 50051
+  max_payload_mb: 2.0
+  sparsification_top_k_pct: 0.05
+  quantization_bits: 8
+  satellite_max_payload_kb: 500
+
+privacy:
+  dp_epsilon: 4.0
+  dp_delta: 1.0e-6
+  gradient_clip_norm: 1.0
+  pixel_reconstruction_psnr_max_db: 12.0
+
+aggregation:
+  strategy: "fa_weighted_scaffold"
+  staleness_penalty_base: 0.85
+  max_tolerated_staleness_rounds: 15
+  precision_window_rounds: 30
+
+targets:
+  map_50_known: 0.79
+  map_50_novel_openworld: 0.51
+  false_alarm_rate_per_hour: 2.0
+  end_to_end_alert_latency_sec: 45
+  communication_payload_mb: 2.0
+
+smpc:
+  n_shares: 3
+  k_threshold: 2
+  node_names: ["ICAO", "Consortium", "NeutralParty"]
+
+logging:
+  level: INFO
+  wandb_project: "fedfod-research"
+  log_dir: "logs/"
+  checkpoint_dir: "checkpoints/"

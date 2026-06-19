@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FedFOD — Federated Runway Debris Detection Platform</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- js-yaml to enable YAML config editing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+    <link rel="stylesheet" href="/web/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand-container">
+                <div class="logo-glow"></div>
+                <i class="fa-solid fa-radar logo-icon"></i>
+                <span class="brand-name">FedFOD</span>
+            </div>
+            
+            <nav class="nav-menu">
+                <button class="nav-item active" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-item" data-tab="detector">
+                    <i class="fa-solid fa-eye"></i>
+                    <span>FOD Detector</span>
+                </button>
+                <button class="nav-item" data-tab="trainer">
+                    <i class="fa-solid fa-gear"></i>
+                    <span>Model Trainer</span>
+                </button>
+                <button class="nav-item" data-tab="configs">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Configurations</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="system-status">
+                    <div class="status-indicator online"></div>
+                    <span>API Server Online</span>
+                </div>
+                <div class="version-tag">v1.1.0 (Enterprise)</div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="header-title">
+                    <h1 id="page-title">Federated Learning Control Center</h1>
+                    <p class="subtitle" id="page-subtitle">Real-time telemetry and open-world runway debris classification</p>
+                </div>
+                
+                <div class="header-badges">
+                    <div class="badge training-badge" id="training-status-badge">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i>
+                        <span>Training Idle</span>
+                    </div>
+                    <div class="badge port-badge">
+                        <i class="fa-solid fa-network-wired"></i>
+                        <span>Port: 8082</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Panel Container -->
+            <div class="panel-container">
+                
+                <!-- Tab: Dashboard -->
+                <section class="tab-panel active" id="tab-dashboard">
+                    <!-- Metrics Cards Grid -->
+                    <div class="metrics-grid">
+                        <div class="glass-card metric-card">
+                            <div class="metric-header">
+                                <span>Active Clients</span>
+                                <i class="fa-solid fa-server icon-blue"></i>
+                            </div>
+                            <h2 class="metric-val" id="active-clients-val">0</h2>
+                            <p class="metric-desc">Airport nodes connected to gRPC</p>
+                        </div>
+                        <div class="glass-card metric-card">
+                            <div class="metric-header">
+                                <span>Current Round</span>
+                                <i class="fa-solid fa-arrows-spin icon-purple"></i>
+                            </div>
+                            <h2 class="metric-val" id="current-round-val">0</h2>
+                            <p class="metric-desc">Out of <span id="total-rounds-val">0</span> scheduled rounds</p>
+                        </div>
+                        <div class="glass-card metric-card">
+                            <div class="metric-header">
+                                <span>Gini Coefficient</span>
+                                <i class="fa-solid fa-scale-balanced icon-cyan"></i>
+                            </div>
+                            <h2 class="metric-val" id="gini-coefficient-val">0.000</h2>
+                            <p class="metric-desc">Aggregation fairness rating (&lt;0.35)</p>
+                        </div>
+                        <div class="glass-card metric-card">
+                            <div class="metric-header">
+                                <span>System Uptime</span>
+                                <i class="fa-solid fa-clock icon-green"></i>
+                            </div>
+                            <h2 class="metric-val" id="system-uptime-val">0s</h2>
+                            <p class="metric-desc">FastAPI bridge server time</p>
+                        </div>
+                    </div>
+
+                    <!-- Telemetry charts / log view -->
+                    <div class="dashboard-charts-layout">
+                        <!-- Chart Card -->
+                        <div class="glass-card chart-container-card">
+                            <h3>Federated Model Analytics</h3>
+                            <div class="chart-wrapper">
+                                <canvas id="metricsChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Logs Card -->
+                        <div class="glass-card logs-container-card">
+                            <div class="logs-header">
+                                <h3>Live Training Console Logs</h3>
+                                <button class="btn btn-secondary btn-sm" id="clear-logs-btn">
+                                    <i class="fa-solid fa-trash-can"></i> Clear
+                                </button>
+                            </div>
+                            <div class="log-console" id="log-console-area">
+                                <div class="log-line system-msg">[SYSTEM] Waiting for WebSocket telemetry connection...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SMPC Security Visualization Panel -->
+                    <div class="glass-card smpc-card" style="margin-top: 20px;">
+                        <div class="smpc-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3>SMPC Privacy & Shamir Weight Splitting</h3>
+                            <div class="badge port-badge" style="border-color:var(--accent-green); color:var(--accent-green); background:rgba(79,209,197,0.05); font-size:11px;">
+                                <i class="fa-solid fa-shield-halved"></i> Cryptographic Privacy Active
+                            </div>
+                        </div>
+                        <p class="card-subtitle" style="margin-bottom:20px; font-size:13px; color:#8a90a6;">Visualizing the Shamir's Secret Sharing threshold (k=2, n=3) parameters partitioning during aggregation.</p>
+                        
+                        <div class="smpc-visualizer-container">
+                            <!-- Left: Coordinator Node -->
+                            <div class="smpc-node-box server-node">
+                                <i class="fa-solid fa-network-wired"></i>
+                                <h4>FL Coordinator</h4>
+                                <span class="node-state-text">Aggregated Weights (W)</span>
+                            </div>
+                            
+                            <!-- Middle: Flow arrows -->
+                            <div class="smpc-flow-container">
+                                <div class="flow-line line-1">
+                                    <div class="flow-dot"></div>
+                                    <span class="flow-label">Share 1 (f(1))</span>
+                                </div>
+                                <div class="flow-line line-2">
+                                    <div class="flow-dot"></div>
+                                    <span class="flow-label">Share 2 (f(2))</span>
+                                </div>
+                                <div class="flow-line line-3">
+                                    <div class="flow-dot"></div>
+                                    <span class="flow-label">Share 3 (f(3))</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Right: Client nodes -->
+                            <div class="smpc-clients-column">
+                                <div class="smpc-node-box client-node">
+                                    <i class="fa-solid fa-plane-departure"></i>
+                                    <h4>Airport A (Client 0)</h4>
+                                    <span class="share-badge">Holds Share 1</span>
+                                </div>
+                                <div class="smpc-node-box client-node">
+                                    <i class="fa-solid fa-plane-arrival"></i>
+                                    <h4>Airport B (Client 1)</h4>
+                                    <span class="share-badge">Holds Share 2</span>
+                                </div>
+                                <div class="smpc-node-box client-node virtual">
+                                    <i class="fa-solid fa-server"></i>
+                                    <h4>Virtual Node (Offline)</h4>
+                                    <span class="share-badge">Holds Share 3</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="smpc-math-explainer">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <span><strong>Security Threshold (k=2, n=3):</strong> Weights are split into 3 shares. Any 2 active clients can reconstruct the global parameters using Lagrange Interpolation: \(W = \sum_{i=1}^{2} y_i \prod_{j \neq i} \frac{x - x_j}{x_i - x_j}\). If 1 client fails or is compromised, zero information about the global weights is leaked.</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tab: FOD Detector -->
+                <section class="tab-panel" id="tab-detector">
+                    <div class="detector-layout">
+                        <!-- Left Panel: Upload & Config -->
+                        <div class="glass-card detector-control-card">
+                            <h3>Upload & Parameters</h3>
+                            <p class="card-subtitle">Select detection parameters and select a runway image.</p>
+                            
+                            <div class="form-group">
+                                <label for="detector-model-select">Detection Algorithm</label>
+                                <select id="detector-model-select" class="form-control">
+                                    <option value="yolov8n.pt">YOLOv8 Nano (yolov8n.pt)</option>
+                                    <option value="rtdetr-l.pt">RT-DETR Large (rtdetr-l.pt)</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group checkbox-group" style="margin-bottom:15px;">
+                                <input type="checkbox" id="detector-dynamic-checkbox">
+                                <label for="detector-dynamic-checkbox">Dynamic Algorithm Mode (Resolution-based)</label>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="detector-conf-range">Confidence Threshold: <span id="conf-val">0.25</span></label>
+                                <input type="range" id="detector-conf-range" min="0.10" max="0.95" step="0.05" value="0.25" class="slider-control">
+                            </div>
+
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="detector-filter-checkbox" checked>
+                                <label for="detector-filter-checkbox">Bypass Weather False Alarm Filter (MLP)</label>
+                            </div>
+
+                            <!-- Weather Parameters (visible when filter is enabled, i.e., checkbox unchecked) -->
+                            <div id="weather-parameters-group" class="weather-group hidden" style="background:rgba(255,255,255,0.02); padding:15px; border-radius:8px; border:1px solid rgba(255,255,255,0.05); margin-bottom:15px;">
+                                <h4 style="margin-bottom:12px; font-size:13px; color:var(--text-bright);"><i class="fa-solid fa-cloud-sun-rain"></i> Simulated Tarmac Weather Context</h4>
+                                
+                                <div class="form-group checkbox-group" style="margin-bottom:12px;">
+                                    <input type="checkbox" id="detector-auto-weather-checkbox" checked>
+                                    <label for="detector-auto-weather-checkbox">Auto-Detect Weather (CV Image Analysis)</label>
+                                </div>
+
+                                <div id="manual-weather-sliders" class="hidden">
+                                    <div class="form-group">
+                                        <label for="detector-rain-range" style="font-size:12px; margin-bottom:6px;">Rain Probability: <span id="rain-val" style="color:var(--accent-blue);">0.00</span></label>
+                                        <input type="range" id="detector-rain-range" min="0.0" max="1.0" step="0.05" value="0.0" class="slider-control" style="width:100%;">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="detector-fog-range" style="font-size:12px; margin-bottom:6px;">Fog Density: <span id="fog-val" style="color:var(--accent-cyan);">0.00</span></label>
+                                        <input type="range" id="detector-fog-range" min="0.0" max="1.0" step="0.05" value="0.0" class="slider-control" style="width:100%;">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="detector-glare-range" style="font-size:12px; margin-bottom:6px;">Sun Glare Intensity: <span id="glare-val" style="color:#ffb86c;">0.05</span></label>
+                                        <input type="range" id="detector-glare-range" min="0.0" max="1.0" step="0.05" value="0.05" class="slider-control" style="width:100%;">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="detector-hour-range" style="font-size:12px; margin-bottom:6px;">Time of Day: <span id="hour-val" style="color:#ff79c6;">12:00</span></label>
+                                        <input type="range" id="detector-hour-range" min="0" max="23" step="1" value="12" class="slider-control" style="width:100%;">
+                                    </div>
+                                </div>
+
+                                <div id="detected-weather-info" style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.03); border-radius: 6px; border: 1px dashed rgba(255,255,255,0.1);">
+                                    <h5 style="margin-bottom:8px; font-size:12px; color:var(--accent-cyan);"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-Detected Stats</h5>
+                                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 11px;">
+                                        <div>Rain: <span id="detected-rain" style="color:var(--accent-blue); font-weight:bold;">N/A</span></div>
+                                        <div>Fog: <span id="detected-fog" style="color:var(--accent-cyan); font-weight:bold;">N/A</span></div>
+                                        <div>Glare: <span id="detected-glare" style="color:#ffb86c; font-weight:bold;">N/A</span></div>
+                                        <div>Hour: <span id="detected-hour" style="color:#ff79c6; font-weight:bold;">N/A</span></div>
+                                    </div>
+                                    <div style="margin-top:6px; font-size:10px; color:#8a90a6; border-top:1px solid rgba(255,255,255,0.05); padding-top:4px;">
+                                        Luminance Mean: <span id="detected-lum-mean">N/A</span> | Std: <span id="detected-lum-std">N/A</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Upload Area -->
+                            <div class="upload-dropzone" id="image-dropzone">
+                                <i class="fa-solid fa-cloud-arrow-up upload-icon"></i>
+                                <p>Drag & drop runway image here or <span>browse files</span></p>
+                                <input type="file" id="image-file-input" accept="image/*" class="file-hidden">
+                            </div>
+
+                            <!-- Run Button -->
+                            <button class="btn btn-primary btn-block" id="run-detection-btn" disabled>
+                                <i class="fa-solid fa-circle-play"></i> Run FOD Analysis
+                            </button>
+                        </div>
+
+                        <!-- Right Panel: Visualizer & Bboxes -->
+                        <div class="detector-results-layout">
+                            <div class="glass-card visualizer-card">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                                    <h3 style="margin-bottom: 0;">Interactive Tarmac Visualizer</h3>
+                                    <span id="active-model-badge" class="badge port-badge" style="display:none; border-color:var(--accent-blue); color:var(--accent-blue); padding: 4px 10px; font-size: 11px;">Model: YOLOv8n</span>
+                                </div>
+                                <div class="image-preview-container">
+                                    <div class="image-placeholder" id="visualizer-placeholder">
+                                        <i class="fa-regular fa-image"></i>
+                                        <p>Annotated prediction result will appear here</p>
+                                    </div>
+                                    <img id="visualizer-img" class="result-img hidden" src="" alt="Runway Predictions">
+                                </div>
+                            </div>
+
+                            <div class="glass-card detection-table-card">
+                                <h3>Classification & BBoxes Table</h3>
+                                <div class="table-wrapper">
+                                    <table class="data-table" id="detections-table">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Class (YOLO)</th>
+                                                <th>Confidence</th>
+                                                <th>Coordinates</th>
+                                                <th>CLIP Open-World Match</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="empty-row">
+                                                <td colspan="5">No detections run yet. Upload an image above.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tab: Model Trainer -->
+                <section class="tab-panel" id="tab-trainer">
+                    <div class="trainer-layout">
+                        <!-- Controls Card -->
+                        <div class="glass-card trainer-settings-card">
+                            <h3>Federated Settings</h3>
+                            <p class="card-subtitle">Configure parameters for active clients and server nodes.</p>
+
+                            <div class="form-row">
+                                <div class="form-group col-6">
+                                    <label for="train-backbone-select">Model Architecture</label>
+                                    <select id="train-backbone-select" class="form-control">
+                                        <option value="yolov8n">YOLOv8 Nano (yolov8n)</option>
+                                        <option value="rtdetr-l">RT-DETR Large (rtdetr-l)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group col-6">
+                                    <label for="train-rounds-input">Global Rounds</label>
+                                    <input type="number" id="train-rounds-input" value="3" min="1" max="100" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group col-6">
+                                    <label for="train-clients-input">Min Clients per Round</label>
+                                    <input type="number" id="train-clients-input" value="2" min="1" max="3" class="form-control">
+                                </div>
+                                <div class="form-group col-6">
+                                    <label for="train-port-input">Server gRPC Port</label>
+                                    <input type="number" id="train-port-input" value="8082" min="1024" max="65535" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="train-dummy-checkbox">
+                                <label for="train-dummy-checkbox">Use Dummy Model (Fast test without CPU training load)</label>
+                            </div>
+
+                            <hr class="divider">
+
+                            <!-- Dataset Zip Upload -->
+                            <h3>Upload Client Datasets</h3>
+                            <p class="card-subtitle">Upload a ZIP containing folders in YOLO format (`train/`, `valid/`).</p>
+                            
+                            <div class="upload-dropzone" id="dataset-dropzone">
+                                <i class="fa-solid fa-file-zipper upload-icon"></i>
+                                <p>Drag & drop dataset `.zip` file here or <span>browse</span></p>
+                                <input type="file" id="dataset-file-input" accept=".zip" class="file-hidden">
+                            </div>
+                            <div id="dataset-upload-status" class="upload-status-msg"></div>
+
+                            <hr class="divider">
+
+                            <!-- Action Buttons -->
+                            <div class="trainer-buttons-row">
+                                <button class="btn btn-primary" id="start-training-btn">
+                                    <i class="fa-solid fa-play"></i> Start Federated Training
+                                </button>
+                                <button class="btn btn-danger" id="stop-training-btn" disabled>
+                                    <i class="fa-solid fa-stop"></i> Stop Training
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Progress Card -->
+                        <div class="glass-card trainer-progress-card">
+                            <h3>Live Training Orchestrator Telemetry</h3>
+                            <div class="simulation-dashboard">
+                                <div class="progress-container">
+                                    <div class="progress-info">
+                                        <span>Federated Rounds Progress</span>
+                                        <span id="rounds-progress-pct">0%</span>
+                                    </div>
+                                    <div class="progress-bar-outer">
+                                        <div class="progress-bar-inner" id="rounds-progress-bar"></div>
+                                    </div>
+                                </div>
+
+                                <div class="nodes-grid">
+                                    <div class="node-status-card" id="node-server-card">
+                                        <div class="node-header">
+                                            <span>FL Coordinator</span>
+                                            <span class="node-badge" id="node-server-badge">Offline</span>
+                                        </div>
+                                        <p class="node-meta">PID: <span id="node-server-pid">N/A</span></p>
+                                    </div>
+                                    <div class="node-status-card" id="node-client0-card">
+                                        <div class="node-header">
+                                            <span>Airport A (Client 0)</span>
+                                            <span class="node-badge" id="node-client0-badge">Offline</span>
+                                        </div>
+                                        <p class="node-meta">PID: <span id="node-client0-pid">N/A</span></p>
+                                    </div>
+                                    <div class="node-status-card" id="node-client1-card">
+                                        <div class="node-header">
+                                            <span>Airport B (Client 1)</span>
+                                            <span class="node-badge" id="node-client1-badge">Offline</span>
+                                        </div>
+                                        <p class="node-meta">PID: <span id="node-client1-pid">N/A</span></p>
+                                    </div>
+                                </div>
+
+                                <div class="statistics-summary glass-panel">
+                                    <h4>Aggregated Convergence Metrics</h4>
+                                    <div class="stats-row">
+                                        <div class="stat-col">
+                                            <span>mAP@50 (Global)</span>
+                                            <span class="stat-large" id="agg-map-val">0.000</span>
+                                        </div>
+                                        <div class="stat-col">
+                                            <span>Training Loss</span>
+                                            <span class="stat-large" id="agg-loss-val">0.000</span>
+                                        </div>
+                                        <div class="stat-col">
+                                            <span>Novel Objects</span>
+                                            <span class="stat-large" id="agg-novel-val">0</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tab: Configurations -->
+                <section class="tab-panel" id="tab-configs">
+                    <div class="configs-layout">
+                        <!-- Selector Sidebar -->
+                        <div class="glass-card configs-sidebar-card">
+                            <h3>Choose Config File</h3>
+                            <div class="config-files-list">
+                                <button class="config-btn active" data-file="global">
+                                    <i class="fa-solid fa-globe"></i> Global Config
+                                </button>
+                                <button class="config-btn" data-file="airport_A">
+                                    <i class="fa-solid fa-plane-departure"></i> Airport A YAML
+                                </button>
+                                <button class="config-btn" data-file="airport_B">
+                                    <i class="fa-solid fa-plane-arrival"></i> Airport B YAML
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Editor Main -->
+                        <div class="glass-card configs-editor-card">
+                            <div class="editor-header">
+                                <h3 id="editor-title">Editing global_config.yaml</h3>
+                                <button class="btn btn-primary btn-sm" id="save-config-btn">
+                                    <i class="fa-solid fa-floppy-disk"></i> Save & Apply Changes
+                                </button>
+                            </div>
+                            <textarea id="config-textarea" class="code-editor" spellcheck="false"></textarea>
+                            <div id="config-save-status" class="save-status-msg"></div>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+    
+    <script src="/web/app.js"></script>
+</body>
+</html>

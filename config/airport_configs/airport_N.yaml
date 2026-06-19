@@ -1,0 +1,83 @@
+# Airport N — Remote Airport Configuration
+# Remote airport with VSAT satellite uplink (3 Mbps), thermal+optical cameras,
+# asynchronous participation due to intermittent connectivity.
+
+airport:
+  name: "Airport_N"
+  type: "remote"
+  icao_code: "ZZZZ"
+  description: "Remote airstrip with satellite-only connectivity and harsh environment"
+
+network:
+  connectivity: "VSAT_satellite"
+  bandwidth_mbps: 3
+  latency_ms: 600
+  reliable: false
+  sync_mode: "asynchronous"
+  max_payload_kb: 500
+  upload_window_hours: [2, 6]  # UTC window when satellite link is best
+
+cameras:
+  count: 3
+  resolution: [1280, 720]  # HD
+  resolution_label: "720p"
+  fps: 15
+  type: "thermal+optical"
+  thermal_resolution: [640, 480]
+  coverage_zones:
+    - "runway_01"
+    - "apron_single"
+
+compute:
+  gpu: "NVIDIA Jetson AGX Orin"
+  gpu_memory_gb: 32  # shared memory
+  cpu_cores: 12
+  ram_gb: 32
+  edge_inference: true
+
+data:
+  quality_score_q: 0.65
+  annotation_completeness: 0.70
+  images_per_day: 3000
+  dominant_classes:
+    - "wildlife_bird"
+    - "wildlife_mammal"
+    - "ice_chunk"
+    - "pavement_fragment"
+  rare_classes:
+    - "luggage_fragment"
+    - "aircraft_panel_fragment"
+    - "cargo_debris"
+    - "composite_debris"
+  class_distribution: "severe_imbalance"
+  data_dir: "data/airport_N"
+  train_annotations: "data/airport_N/annotations/train.json"
+  val_annotations: "data/airport_N/annotations/val.json"
+
+training:
+  local_epochs: 5  # More local epochs to compensate for fewer participation rounds
+  local_batch_size: 4
+  learning_rate: 0.0008
+  augmentation_level: "aggressive"
+  max_samples_per_round: 2000
+
+communication:
+  max_payload_kb: 500  # Satellite constraint
+  compression: "sparsification_topk"
+  quantization_bits: 8
+  staleness_tolerance_rounds: 15  # May miss rounds due to connectivity
+  retry_on_failure: true
+  max_retries: 3
+
+environment:
+  weather_conditions: ["clear", "snow", "ice", "blizzard", "night", "polar_night"]
+  surface_types: ["gravel", "compacted_snow"]
+  lighting: "extreme_variation"
+  temperature_range_c: [-45, 25]
+
+async:
+  enabled: true
+  max_staleness_rounds: 15
+  staleness_penalty_base: 0.85
+  fallback_to_local: true
+  local_checkpoint_interval_epochs: 1

@@ -1,0 +1,17 @@
+\begin{table}[t]
+\centering
+\caption{Ablation Study}
+\label{tab:ablation}
+\begin{tabular}{lcc}
+\toprule
+Component & mAP@0.5 & $\Delta$FAR \\
+\midrule
+Base RT-DETR & 0.421 & — \\
++SCAFFOLD & 0.583 & -1.1 \\
++Weather Aug & 0.612 & -0.4 \\
++FA Filter & 0.645 & -0.9 \\
++DP ($\varepsilon\!=\!8$) & 0.638 & +0.1 \\
+Full FedFOD & 0.672 & -2.4 \\
+\bottomrule
+\end{tabular}
+\end{table}

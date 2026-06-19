@@ -1,0 +1,69 @@
+# Airport B — Regional Airport Configuration
+# Regional airport with LTE connectivity and 1080p cameras.
+
+airport:
+  name: "Airport_B"
+  type: "regional"
+  icao_code: "YYYY"
+  description: "Medium-sized regional airport with moderate traffic volume"
+
+network:
+  connectivity: "LTE"
+  bandwidth_mbps: 50
+  latency_ms: 30
+  reliable: true
+  sync_mode: "synchronous"
+
+cameras:
+  count: 6
+  resolution: [1920, 1080]  # Full HD
+  resolution_label: "1080p"
+  fps: 25
+  type: "optical"
+  coverage_zones:
+    - "runway_09"
+    - "taxiway_C"
+    - "apron_main"
+
+compute:
+  gpu: "NVIDIA RTX 3080"
+  gpu_memory_gb: 10
+  cpu_cores: 16
+  ram_gb: 64
+  edge_inference: true
+
+data:
+  quality_score_q: 0.78
+  annotation_completeness: 0.85
+  images_per_day: 15000
+  dominant_classes:
+    - "metal_fastener"
+    - "pavement_fragment"
+    - "rubber_strip"
+    - "ground_equipment_part"
+  rare_classes:
+    - "composite_debris"
+    - "cargo_debris"
+    - "volcanic_ash_deposit"
+  class_distribution: "high_imbalance"
+  data_dir: "data/airport_B"
+  train_annotations: "data/airport_B/annotations/train.json"
+  val_annotations: "data/airport_B/annotations/val.json"
+
+training:
+  local_epochs: 3
+  local_batch_size: 8
+  learning_rate: 0.001
+  augmentation_level: "aggressive"
+  max_samples_per_round: 5000
+
+communication:
+  max_payload_mb: 2.0
+  compression: "sparsification_topk"
+  quantization_bits: 8
+
+environment:
+  weather_conditions: ["clear", "rain", "snow", "night"]
+  surface_types: ["asphalt"]
+  lighting: "variable"
+  temperature_range_c: [-20, 38]

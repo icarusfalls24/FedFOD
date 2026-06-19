@@ -1,0 +1,4 @@
+[console_scripts]
+fedfod-client = fedfod.client:main
+fedfod-server = fedfod.server:main
+fedfod-train = fedfod.train:main

@@ -1,0 +1,264 @@
+# =============================================================================
+# FedFOD Hyperparameter Reference
+# Complete configuration for Federated FOD Detection System
+#
+# This file serves as the single source of truth for all hyperparameters
+# used across the FedFOD pipeline: data processing, model training,
+# federated aggregation, privacy mechanisms, and evaluation.
+# =============================================================================
+
+
+# =============================================================================
+# RT-DETR Fine-tuning Configuration
+# =============================================================================
+rtdetr:
+  model: rtdetr-l.pt                   # Pre-trained RT-DETR-L checkpoint
+  backbone: ResNet-50                  # Backbone architecture (frozen layers 0-2)
+  imgsz: 640                           # Input image size (square)
+  epochs: 80                           # Total training epochs per client
+  batch_size: 8                        # Training batch size
+  lr0: 1.0e-4                          # Initial learning rate
+  lrf: 0.01                            # Final learning rate factor (lr0 * lrf)
+  warmup_epochs: 5                     # Linear warmup epochs
+  warmup_momentum: 0.8                 # Warmup momentum
+  warmup_bias_lr: 0.1                  # Warmup bias learning rate
+  momentum: 0.937                      # SGD momentum / Adam beta1
+  weight_decay: 5.0e-4                 # L2 regularization weight decay
+  patience: 20                         # Early stopping patience (epochs)
+  amp: false                           # Automatic Mixed Precision (disabled for DP compatibility)
+  workers: 4                           # DataLoader worker threads
+  seed: 42                             # Random seed for reproducibility
+  optimizer: AdamW                     # Optimizer (AdamW | SGD)
+  scheduler: cosine                    # LR scheduler (cosine | linear | step)
+  save_period: 10                      # Save checkpoint every N epochs
+  num_classes: 15                      # Total FOD object classes
+  class_names:
+    - bolt                             # 0  - Small metal fastener
+    - nut                              # 1  - Threaded metal nut
+    - washer                           # 2  - Flat metal washer
+    - rivet                            # 3  - Aircraft rivet/fastener
+    - wildlife                         # 4  - Birds, small animals
+    - wire                             # 5  - Loose wire/cable
+    - tool                             # 6  - Maintenance tools
+    - fabric                           # 7  - Cloth/fabric debris
+    - aircraft_part                    # 8  - Broken aircraft components
+    - debris                           # 9  - General debris/fragments
+    - vehicle                          # 10 - Ground support equipment
+    - plastic                          # 11 - Plastic debris/bags
+    - rubber                           # 12 - Tire fragments/rubber
+    - paper                            # 13 - Paper/cardboard debris
+    - metal_sheet                      # 14 - Metal sheet/panel fragments
+
+
+# =============================================================================
+# SCAFFOLD Federated Learning Configuration
+# =============================================================================
+scaffold:
+  num_rounds: 100                      # Total FL communication rounds
+  num_clients: 3                       # Number of participating airports
+  clients_per_round: 3                 # Clients selected per round (full participation)
+  local_epochs: 5                      # Local training epochs per FL round
+  local_lr: 1.0e-4                     # Local client learning rate
+  global_lr: 1.0                       # Server-side global learning rate
+  server_momentum: 0.0                 # Server momentum (0 = no momentum)
+  max_grad_norm: 10.0                  # Maximum gradient norm for clipping
+  control_variate_lr: 1.0              # SCAFFOLD control variate update rate
+  min_samples_per_client: 50           # Minimum samples required per client
+  checkpoint_every: 10                 # Save global model every N rounds
+  early_stopping_rounds: 20            # Stop if no improvement for N rounds
+  aggregation_weights: proportional    # Client weighting: proportional | uniform
+
+
+# =============================================================================
+# Differential Privacy Configuration
+# =============================================================================
+differential_privacy:
+  enabled: true                        # Enable DP-SGD during local training
+  mechanism: gaussian                  # Noise mechanism: gaussian | laplace
+  epsilon: 8.0                         # Privacy budget (ε)
+  delta: 1.0e-5                        # Privacy failure probability (δ)
+  max_grad_norm: 1.0                   # Per-sample gradient clipping norm for DP-SGD
+  noise_multiplier: null               # Auto-computed from (ε, δ, epochs) if null
+  accountant: rdp                      # Privacy accountant: rdp | gdp | prv
+  target_epsilon: 8.0                  # Target ε for auto noise calibration
+  secure_aggregation: true             # Use secure aggregation with DP
+
+
+# =============================================================================
+# Secure Multi-Party Computation (SMPC)
+# =============================================================================
+smpc:
+  enabled: true                        # Enable SMPC for model aggregation
+  protocol: additive_sharing           # Secret sharing protocol
+  num_shares: 3                        # Number of shares (= num_clients)
+  precision_bits: 32                   # Fixed-point precision for sharing
+  ring_size: null                      # Ring size (auto from precision_bits if null)
+
+
+# =============================================================================
+# False Alarm Filter MLP
+# =============================================================================
+fa_filter:
+  input_dim: 12                        # Number of input features
+  hidden_dims: [64, 32, 16]            # Hidden layer dimensions
+  dropout_rates: [0.3, 0.2, 0.0]      # Dropout rate per hidden layer
+  activation: relu                     # Activation function
+  output_activation: sigmoid           # Output activation (binary classification)
+  epochs: 50                           # Training epochs
+  batch_size: 64                       # Training batch size
+  lr: 0.001                            # Learning rate
+  optimizer: adam                       # Optimizer
+  scheduler: reduce_on_plateau         # LR scheduler
+  scheduler_patience: 5                # Scheduler patience (epochs)
+  scheduler_factor: 0.5                # Scheduler reduction factor
+  weight_decay: 1.0e-5                 # L2 regularization
+  features:                            # Input feature names (ordered)
+    - confidence                       # Detection confidence score
+    - bbox_area                        # Bounding box area (normalized)
+    - aspect_ratio                     # Bbox width / height ratio
+    - x_center                         # Bbox center x (normalized)
+    - y_center                         # Bbox center y (normalized)
+    - rain_prob                        # Current rain probability
+    - fog_prob                         # Current fog probability
+    - glare_prob                       # Current glare probability
+    - hour_sin                         # sin(2π × hour/24) for time encoding
+    - hour_cos                         # cos(2π × hour/24) for time encoding
+    - luminance_mean                   # Mean image luminance in bbox region
+    - luminance_std                    # Std of image luminance in bbox region
+
+
+# =============================================================================
+# Weather Augmentation Profiles Per Airport
+# =============================================================================
+augmentation:
+  profiles:
+    airport_A:                         # Tropical climate airport
+      climate: tropical
+      rain_probability: 0.30           # 30% chance of rain overlay
+      fog_probability: 0.05            # 5% chance of fog overlay
+      glare_probability: 0.25          # 25% chance of glare overlay
+      profile_string: "rain:0.30,fog:0.05,glare:0.25"
+    airport_B:                         # Temperate climate airport
+      climate: temperate
+      rain_probability: 0.15           # 15% chance of rain overlay
+      fog_probability: 0.20            # 20% chance of fog overlay
+      glare_probability: 0.15          # 15% chance of glare overlay
+      profile_string: "rain:0.15,fog:0.20,glare:0.15"
+    airport_N:                         # Arid climate airport
+      climate: arid
+      rain_probability: 0.05           # 5% chance of rain overlay
+      fog_probability: 0.03            # 3% chance of fog overlay
+      glare_probability: 0.35          # 35% chance of glare overlay
+      profile_string: "rain:0.05,fog:0.03,glare:0.35"
+  n_augmented_per_image: 1             # Augmented copies per original image
+  rain:
+    intensity_range: [0.3, 0.7]        # Random intensity range for rain
+    drop_length_range: [10, 30]        # Rain drop length in pixels
+    drop_width: 1                      # Rain drop width in pixels
+  fog:
+    intensity_range: [0.3, 0.6]        # Random intensity range for fog
+  glare:
+    intensity_range: [0.3, 0.7]        # Random intensity range for glare
+
+
+# =============================================================================
+# Dirichlet Partitioning
+# =============================================================================
+partitioning:
+  n_clients: 3                         # Number of federated clients
+  alpha: 0.1                           # Dirichlet concentration (lower = more non-IID)
+  seed: 42                             # Random seed for reproducibility
+  train_ratio: 0.70                    # Fraction of data for training
+  val_ratio: 0.15                      # Fraction of data for validation
+  test_ratio: 0.15                     # Fraction of data for testing
+  min_samples_per_class: 5             # Minimum samples per class per client
+
+
+# =============================================================================
+# Synthetic Data Generation
+# =============================================================================
+synthetic:
+  image_size: [640, 640]               # Generated image dimensions
+  samples_per_class: 100               # Synthetic samples per rare class
+  target_classes:                      # Classes generated synthetically
+    - bolt                             # Class 0
+    - nut                              # Class 1
+    - washer                           # Class 2
+    - rivet                            # Class 3
+    - wire                             # Class 5
+    - fabric                           # Class 7
+    - plastic                          # Class 11
+    - rubber                           # Class 12
+    - paper                            # Class 13
+    - metal_sheet                      # Class 14
+
+
+# =============================================================================
+# Dataset Configuration
+# =============================================================================
+datasets:
+  arod:
+    format: voc                        # Pascal VOC annotation format
+    annotation_dir: Annotations        # Subdirectory for XML annotations
+    image_dir: JPEGImages              # Subdirectory for images
+    image_ext: .jpg                    # Image file extension
+  visdrone:
+    format: csv                        # CSV annotation format
+    categories_to_fod:                 # VisDrone category → FedFOD class mapping
+      4: 10                            # car → vehicle
+      5: 10                            # van → vehicle
+      6: 10                            # truck → vehicle
+      11: 9                            # others → debris
+
+
+# =============================================================================
+# Evaluation Metrics
+# =============================================================================
+evaluation:
+  iou_thresholds:                      # IoU thresholds for mAP computation
+    - 0.5
+    - 0.55
+    - 0.6
+    - 0.65
+    - 0.7
+    - 0.75
+    - 0.8
+    - 0.85
+    - 0.9
+    - 0.95
+  primary_metric: "mAP@0.5"           # Primary evaluation metric
+  confidence_threshold: 0.25          # Minimum detection confidence
+  nms_threshold: 0.45                 # Non-maximum suppression IoU threshold
+  max_detections: 300                 # Maximum detections per image
+  far_normalization: runway_hours     # FAR denominator: runway_hours | images
+
+
+# =============================================================================
+# Communication & Infrastructure
+# =============================================================================
+communication:
+  compression: none                    # Gradient compression: none | topk | quantize
+  topk_ratio: 0.1                      # Top-K sparsification ratio (if compression=topk)
+  quantize_bits: 8                     # Quantization bit width (if compression=quantize)
+  max_message_size_mb: 100             # Maximum message size in megabytes
+
+
+# =============================================================================
+# Logging & Experiment Tracking
+# =============================================================================
+logging:
+  level: INFO                          # Python logging level
+  wandb:
+    enabled: false                     # Weights & Biases integration (optional)
+    project: fedfod                    # W&B project name
+    entity: null                       # W&B team/entity (null = personal)
+    tags:                              # Experiment tags
+      - federated
+      - fod
+      - rt-detr
+      - scaffold
+  tensorboard:
+    enabled: true                      # TensorBoard logging
+    log_dir: runs/tensorboard          # TensorBoard log directory
+  checkpoint_dir: checkpoints          # Model checkpoint directory
+  results_dir: results                 # Evaluation results directory
