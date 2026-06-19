@@ -1,3 +1,13 @@
+---
+title: FedFOD Dashboard
+emoji: 🚀
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
 <p align="center">
   <h1 align="center">FedFOD — Federated Foreign Object Debris Detection</h1>
 </p>
