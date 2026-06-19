@@ -356,7 +356,7 @@ class LiveFedFODClient(fl.client.NumPyClient):
         """Build a DataLoader from a YOLO directory or a dummy dataset."""
         from pathlib import Path
 
-        if data_dir and Path(data_dir).is_dir():
+        if not self._use_dummy and data_dir and Path(data_dir).is_dir():
             images_dir = Path(data_dir) / "train" / "images"
             labels_dir = Path(data_dir) / "train" / "labels"
             if images_dir.is_dir() and labels_dir.is_dir():
