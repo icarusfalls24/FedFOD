@@ -23,6 +23,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy project files and set ownership to user 1000
 COPY --chown=user:user . .
+RUN chown -R user:user /app
 
 # Switch to non-root user
 USER user
