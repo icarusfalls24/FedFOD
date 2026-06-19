@@ -32,6 +32,7 @@ Run:
 from __future__ import annotations
 
 import asyncio
+from contextlib import asynccontextmanager
 import datetime
 import json
 import logging
@@ -610,6 +611,23 @@ def _kill_all_training() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Lifecycle events (Lifespan)
+# ---------------------------------------------------------------------------
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Ensure required directories exist on server boot and clean up resources on shutdown."""
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    logger.info("FedFOD API server started.")
+    yield
+    # Cleanup: kill training processes and cancel background tasks.
+    _kill_all_training()
+    if _state.monitor_task and not _state.monitor_task.done():
+        _state.monitor_task.cancel()
+    logger.info("FedFOD API server shutting down.")
+
+
+# ---------------------------------------------------------------------------
 # FastAPI application
 # ---------------------------------------------------------------------------
 
@@ -617,6 +635,7 @@ app = FastAPI(
     title="FedFOD API Server",
     description="REST + WebSocket bridge for the FedFOD federated learning system.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -629,26 +648,6 @@ app.add_middleware(
 
 # Expose Prometheus metrics endpoint
 app.mount("/metrics", make_asgi_app())
-
-
-# ---------------------------------------------------------------------------
-# Lifecycle events
-# ---------------------------------------------------------------------------
-
-@app.on_event("startup")
-async def _on_startup() -> None:
-    """Ensure required directories exist on server boot."""
-    LOGS_DIR.mkdir(parents=True, exist_ok=True)
-    logger.info("FedFOD API server started on port 8000.")
-
-
-@app.on_event("shutdown")
-async def _on_shutdown() -> None:
-    """Cleanup: kill training processes and cancel background tasks."""
-    _kill_all_training()
-    if _state.monitor_task and not _state.monitor_task.done():
-        _state.monitor_task.cancel()
-    logger.info("FedFOD API server shutting down.")
 
 
 # ===================================================================== #
